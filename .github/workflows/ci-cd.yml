@@ -1,0 +1,33 @@
+name: CI with Vault
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  vault-secret-job:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Install Vault CLI
+      run: |
+        curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor > hashicorp.gpg
+        sudo install -o root -g root -m 644 hashicorp.gpg /etc/apt/trusted.gpg.d/
+        sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+        sudo apt-get update && sudo apt-get install vault -y
+
+    - name: Authenticate to Vault
+      run: |
+        export VAULT_ADDR=${{ secrets.VAULT_ADDR }}
+        VAULT_TOKEN=$(vault write -field=token auth/approle/login \
+          role_id=${{ secrets.VAULT_ROLE_ID }} \
+          secret_id=${{ secrets.VAULT_SECRET_ID }})
+        echo "VAULT_TOKEN=$VAULT_TOKEN" >> $GITHUB_ENV
+
+    - name: Fetch Secrets from Vault
+      run: |
+        export VAULT_ADDR=${{ secrets.VAULT_ADDR }}
+        export VAULT_TOKEN=$VAULT_TOKEN
+        vault kv get -field=GITHUB_TOKEN secret/github-app
