@@ -7,6 +7,7 @@ on:
 jobs:
   vault-secret-job:
     runs-on: ubuntu-latest
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -30,4 +31,17 @@ jobs:
       run: |
         export VAULT_ADDR=${{ secrets.VAULT_ADDR }}
         export VAULT_TOKEN=$VAULT_TOKEN
-        vault kv get -field=GITHUB_TOKEN secret/github-app
+
+        # Fetch GITHUB_TOKEN
+        GITHUB_TOKEN=$(vault kv get -field=GITHUB_TOKEN secret/github-app)
+        echo "GITHUB_TOKEN=$GITHUB_TOKEN" >> $GITHUB_ENV
+
+        # Fetch DB_PASSWORD
+        DB_PASSWORD=$(vault kv get -field=DB_PASSWORD secret/github-app)
+        echo "DB_PASSWORD=$DB_PASSWORD" >> $GITHUB_ENV
+
+    - name: Use Secrets
+      run: |
+        echo "Using fetched secrets..."
+        echo "GITHUB_TOKEN is: $GITHUB_TOKEN"
+        echo "DB_PASSWORD is: $DB_PASSWORD"
